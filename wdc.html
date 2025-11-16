@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <script src="https://public.tableau.com/javascripts/api/tableauwdc-2.3.latest.js"></script>
   <style>
-    body { font-family: Arial; text-align: center; padding: 50px; background: #f8f9fa; }
-    button { padding: 16px 32px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    body { font-family: Arial; text-align: center; padding: 50px; background: #f0f8ff; }
+    button { padding: 15px 30px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; }
     button:hover { background: #005a99; }
     .status { margin-top: 20px; font-weight: bold; color: #28a745; }
   </style>
@@ -21,22 +21,26 @@
       var myConnector = tableau.makeConnector();
 
       myConnector.getSchema = function(schemaCallback) {
+        tableau.log("جاري تعريف الهيكل...");
         var cols = [
           { id: "id", dataType: tableau.dataTypeEnum.int },
           { id: "name", alias: "الاسم", dataType: tableau.dataTypeEnum.string },
           { id: "sku", alias: "رمز", dataType: tableau.dataTypeEnum.string },
           { id: "category", alias: "الفئة", dataType: tableau.dataTypeEnum.string },
           { id: "brand", alias: "الماركة", dataType: tableau.dataTypeEnum.string },
+          { id: "unit", alias: "الوحدة", dataType: tableau.dataTypeEnum.string },
           { id: "current_stock", alias: "المخزون", dataType: tableau.dataTypeEnum.float },
           { id: "min_price", alias: "أقل سعر", dataType: tableau.dataTypeEnum.float },
-          { id: "max_price", alias: "أعلى سعر", dataType: tableau.dataTypeEnum.float }
+          { id: "max_price", alias: "أعلى سعر", dataType: tableau.dataTypeEnum.float },
+          { id: "is_inactive", alias: "غير نشط", dataType: tableau.dataTypeEnum.string }
         ];
-        var table = { id: "Products", columns: cols };
+        var table = { id: "Products", alias: "منتجات AiAshal", columns: cols };
         schemaCallback([table]);
       };
 
       myConnector.getData = function(table, doneCallback) {
         document.getElementById("status").innerHTML = "جاري جلب البيانات...";
+        tableau.log("جاري جلب البيانات من API...");
 
         fetch("https://ashaldeoms.com/AiAshal/api/products")
           .then(response => {
@@ -44,23 +48,32 @@
             return response.json();
           })
           .then(data => {
-            table.appendRows(data);
-            document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
+            if (data.length === 0) {
+              document.getElementById("status").innerHTML = "لا توجد بيانات";
+              tableau.log("لا توجد بيانات");
+            } else {
+              table.appendRows(data);
+              document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
+              tableau.log("تم جلب " + data.length + " منتج");
+            }
             doneCallback();
           })
           .catch(err => {
             document.getElementById("status").innerHTML = "خطأ: " + err.message;
+            tableau.log("خطأ: " + err.message);
             tableau.abortWithError(err.message);
           });
       };
 
       tableau.registerConnector(myConnector);
 
-      // الحل البسيط: استدعاء submit مباشرة
-      document.getElementById("submitButton").onclick = function() {
-        tableau.connectionName = "AiAshal Products";
-        tableau.submit();
-      };
+      // الحل الرسمي: استخدام $(document).ready للزر
+      $(document).ready(function () {
+        $("#submitButton").click(function () {
+          tableau.connectionName = "AiAshal Products";
+          tableau.submit();
+        });
+      });
     })();
   </script>
 </body>
