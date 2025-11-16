@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AiAshal Products Live Connector</title>
+  <title>AiAshal Products WDC</title>
   <meta charset="utf-8">
-  <script src="https://public.tableau.com/javascripts/api/tableauwdc-2.3.latest.js"></script>
+  <script type="text/javascript" src="https://public.tableau.com/javascripts/api/tableauwdc-2.3.latest.js"></script>
   <style>
-    body { font-family: Arial; text-align: center; padding: 50px; background: #f4f4f4; }
+    body { font-family: Arial, sans-serif; text-align: center; padding: 40px; background: #f8f9fa; }
+    .container { max-width: 600px; margin: 0 auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
     h2 { color: #007acc; }
-    button { padding: 12px 24px; font-size: 16px; background: #007acc; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; }
-    button:hover { background: #005a99; }
+    button { padding: 14px 28px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+    button:hover { background: #005a99; transform: scale(1.05); }
+    .status { margin-top: 20px; font-weight: bold; color: #28a745; }
   </style>
 </head>
 <body>
-  <h2>ربط بيانات المنتجات من AiAshal</h2>
-  <p>اضغط الزر لجلب البيانات مباشرة من نظامك</p>
-  <button id="submitButton">جلب البيانات الآن</button>
+  <div class="container">
+    <h2>ربط بيانات المنتجات من AiAshal</h2>
+    <p>اضغط الزر لجلب البيانات مباشرة من نظامك</p>
+    <button id="submitButton">جلب البيانات الآن</button>
+    <div id="status" class="status"></div>
+  </div>
 
-  <script>
+  <script type="text/javascript">
     (function() {
       var myConnector = tableau.makeConnector();
 
@@ -29,7 +34,7 @@
           { id: "sub_category", alias: "الفئة الفرعية", dataType: tableau.dataTypeEnum.string },
           { id: "brand", alias: "الماركة", dataType: tableau.dataTypeEnum.string },
           { id: "unit", alias: "الوحدة", dataType: tableau.dataTypeEnum.string },
-          { id: "current_stock", alias: "المخزون الحالي", dataType: tableau.dataTypeEnum.float },
+          { id: "current_stock", alias: "المخزون", dataType: tableau.dataTypeEnum.float },
           { id: "min_price", alias: "أقل سعر", dataType: tableau.dataTypeEnum.float },
           { id: "max_price", alias: "أعلى سعر", dataType: tableau.dataTypeEnum.float },
           { id: "is_inactive", alias: "غير نشط", dataType: tableau.dataTypeEnum.string }
@@ -40,19 +45,28 @@
       };
 
       myConnector.getData = function(table, doneCallback) {
+        document.getElementById("status").innerHTML = "جاري جلب البيانات...";
+
         fetch("https://ashaldeoms.com/AiAshal/api/products", {
+          method: "GET",
           headers: { "Accept": "application/json" }
         })
-        .then(res => {
-          if (!res.ok) throw new Error("فشل الاتصال بالخادم");
-          return res.json();
+        .then(response => {
+          if (!response.ok) throw new Error("فشل الاتصال: " + response.status);
+          return response.json();
         })
         .then(data => {
-          table.appendRows(data);
+          if (data.length === 0) {
+            document.getElementById("status").innerHTML = "لا توجد بيانات";
+          } else {
+            table.appendRows(data);
+            document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
+          }
           doneCallback();
         })
         .catch(err => {
-          tableau.abortWithError("خطأ: " + err.message);
+          document.getElementById("status").innerHTML = "خطأ: " + err.message;
+          tableau.abortWithError(err.message);
         });
       };
 
