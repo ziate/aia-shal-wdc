@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AiAshal WDC</title>
+  <title>AiAshal Products WDC</title>
   <meta charset="utf-8">
   <script src="https://public.tableau.com/javascripts/api/tableauwdc-2.3.latest.js"></script>
   <style>
-    body { font-family: Arial; text-align: center; padding: 50px; background: #f0f8ff; }
-    button { padding: 15px 30px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    body { font-family: Arial; text-align: center; padding: 50px; background: #f8f9fa; }
+    button { padding: 16px 32px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; }
     button:hover { background: #005a99; }
+    .status { margin-top: 20px; font-weight: bold; color: #28a745; }
   </style>
 </head>
 <body>
   <h2>جلب بيانات المنتجات من AiAshal</h2>
   <button id="submitButton">جلب البيانات الآن</button>
-  <div id="status"></div>
+  <div id="status" class="status"></div>
 
   <script>
     (function() {
@@ -36,38 +37,30 @@
 
       myConnector.getData = function(table, doneCallback) {
         document.getElementById("status").innerHTML = "جاري جلب البيانات...";
-        
+
         fetch("https://ashaldeoms.com/AiAshal/api/products")
           .then(response => {
-            if (!response.ok) {
-              throw new Error("فشل الاتصال: " + response.status);
-            }
+            if (!response.ok) throw new Error("فشل الاتصال: " + response.status);
             return response.json();
           })
           .then(data => {
-            if (data && data.length > 0) {
-              table.appendRows(data);
-              document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
-            } else {
-              document.getElementById("status").innerHTML = "لا توجد بيانات";
-            }
+            table.appendRows(data);
+            document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
             doneCallback();
           })
           .catch(err => {
-            console.error("Error:", err);
             document.getElementById("status").innerHTML = "خطأ: " + err.message;
-            doneCallback();
+            tableau.abortWithError(err.message);
           });
       };
 
       tableau.registerConnector(myConnector);
 
-      // التفعيل المباشر للـ connector
-      document.getElementById("submitButton").addEventListener("click", function() {
+      // الحل البسيط: استدعاء submit مباشرة
+      document.getElementById("submitButton").onclick = function() {
         tableau.connectionName = "AiAshal Products";
         tableau.submit();
-      });
-
+      };
     })();
   </script>
 </body>
