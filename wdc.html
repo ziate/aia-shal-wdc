@@ -8,11 +8,16 @@
     body { font-family: Arial; text-align: center; padding: 50px; background: #f0f8ff; }
     button { padding: 15px 30px; font-size: 18px; background: #007acc; color: white; border: none; border-radius: 8px; cursor: pointer; }
     button:hover { background: #005a99; }
+    iframe { width: 100%; height: 600px; border: 1px solid #ddd; margin-top: 20px; }
   </style>
 </head>
 <body>
   <h2>جلب بيانات المنتجات من AiAshal</h2>
   <button id="submitButton">جلب البيانات الآن</button>
+  <div id="status"></div>
+
+  <!-- إطار العمل الداخلي لـ Tableau -->
+  <iframe id="tableauFrame" style="display:none;"></iframe>
 
   <script>
     (function() {
@@ -34,20 +39,49 @@
       };
 
       myConnector.getData = function(table, doneCallback) {
+        document.getElementById("status").innerHTML = "جاري جلب البيانات...";
         fetch("https://ashaldeoms.com/AiAshal/api/products")
-          .then(r => r.json())
+          .then(r => {
+            if (!r.ok) throw new Error("فشل الاتصال: " + r.status);
+            return r.json();
+          })
           .then(data => {
-            table.appendRows(data);
+            if (data.length === 0) {
+              document.getElementById("status").innerHTML = "لا توجد بيانات";
+            } else {
+              table.appendRows(data);
+              document.getElementById("status").innerHTML = "تم جلب " + data.length + " منتج بنجاح!";
+            }
             doneCallback();
+          })
+          .catch(err => {
+            document.getElementById("status").innerHTML = "خطأ: " + err.message;
+            tableau.abortWithError(err.message);
           });
       };
 
       tableau.registerConnector(myConnector);
 
+      // استخدام iframe + postMessage
       document.getElementById("submitButton").onclick = function() {
-        tableau.connectionName = "AiAshal Products";
-        tableau.submit();
+        var frame = document.getElementById("tableauFrame");
+        frame.style.display = "block";
+        frame.contentWindow.postMessage({
+          type: "submit",
+          connectionName: "AiAshal Products"
+        }, "*");
       };
+
+      // استقبال الرسائل من الـ iframe
+      window.addEventListener("message", function(event) {
+        if (event.data.type === "ready") {
+          tableau.submit();
+        }
+      });
+
+      // تحميل الـ iframe
+      var iframe = document.getElementById("tableauFrame");
+      iframe.src = "data:text/html,<script>window.parent.postMessage({type:'ready'}, '*');</script>";
     })();
   </script>
 </body>
